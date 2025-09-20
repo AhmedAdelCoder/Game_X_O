@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لعبة X O ثلاثية الأبعاد</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Cairo', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            perspective: 1000px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* === ANIMATED BACKGROUND === */
+        .background-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            overflow: hidden;
+        }
+
+        .gradient-orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.3;
+            animation: orbFloat 20s ease-in-out infinite;
+        }
+
+        .orb-1 {
+            width: 400px;
+            height: 400px;
+            background: linear-gradient(135deg, #ff6b6b, #ffd93d);
+            top: -200px;
+            left: -200px;
+            animation-delay: 0s;
+        }
+
+        .orb-2 {
+            width: 350px;
+            height: 350px;
+            background: linear-gradient(135deg, #4ecdc4, #44a08d);
+            top: 50%;
+            right: -175px;
+            animation-delay: -7s;
+        }
+
+        .orb-3 {
+            width: 300px;
+            height: 300px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            bottom: -150px;
+            left: 50%;
+            transform: translateX(-50%);
+            animation-delay: -14s;
+        }
+
+        @keyframes orbFloat {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            25% { transform: translate(100px, -100px) scale(1.1); }
+            50% { transform: translate(-50px, -150px) scale(0.9); }
+            75% { transform: translate(-100px, 50px) scale(1.05); }
+        }
+
+        /* === SETUP SCREEN === */
+        .setup-screen {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(25px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 28px;
+            padding: 3rem 2.5rem;
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.25);
+            text-align: center;
+            color: white;
+            max-width: 500px;
+            width: 90%;
+            position: relative;
+            overflow: hidden;
+            animation: slideInUp 0.8s ease-out;
+        }
+
+        .setup-screen.hidden {
+            display: none;
+        }
+
+        .setup-screen::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent);
+        }
+
+        .setup-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            background: linear-gradient(45deg, #ff6b6b, #ffd93d);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: glow 2s ease-in-out infinite alternate;
+            text-shadow: 0 0 20px rgba(255, 107, 107, 0.5);
+        }
+
+        .setup-subtitle {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 1.1rem;
+            margin-bottom: 2rem;
+            font-weight: 400;
+        }
+
+        .players-input {
+            display: grid;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .player-group {
+            display: grid;
+            gap: 0.5rem;
+        }
+
+        .player-label {
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 0.9rem;
+            text-align: right;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .player-x {
+            color: #ff6b6b;
+        }
+
+        .player-o {
+            color: #4ecdc4;
+        }
+
+        .player-input {
+            width: 100%;
+            padding: 1rem 1.25rem;
+            background: rgba(255, 255, 255, 0.15);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 16px;
+            font-family: 'Cairo', sans-serif;
+            font-size: 1rem;
+            color: white;
+            transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            backdrop-filter: blur(10px);
+            outline: none;
+            text-align: center;
+        }
+
+        .player-input::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+            transition: all 0.3s ease;
+        }
+
+        .player-input:focus {
+            border-color: rgba(255, 255, 255, 0.5);
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .player-input:focus::placeholder {
+            opacity: 0.8;
+            transform: translateY(-2px);
+        }
+
+        .start-btn {
+            width: 100%;
+            padding: 1rem 2rem;
+            background: linear-gradient(135deg, #ff6b6b, #ffd93d);
+            color: white;
+            border: none;
+            border-radius: 16px;
+            font-family: 'Cairo', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(255, 107, 107, 0.3);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .start-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.6s ease;
+        }
+
+        .start-btn:hover {
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 20px 40px rgba(255, 107, 107, 0.4);
+        }
+
+        .start-btn:hover::before {
+            left: 100%;
+        }
+
+        .start-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(50px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        @keyframes glow {
+            from { filter: drop-shadow(0 0 10px rgba(255, 107, 107, 0.5)); }
+            to { filter: drop-shadow(0 0 20px rgba(255, 217, 61, 0.8)); }
+        }
+
+        /* === GAME SCREEN === */
+        .game-container {
+            text-align: center;
+            color: white;
+            position: relative;
+            z-index: 10;
+            display: none;
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        .game-container.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .title {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 2rem;
+            text-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            background: linear-gradient(45deg, #ff6b6b, #ffd93d);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+
+        .game-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding: 0 2rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .player-turn, .score {
+            background: rgba(255,255,255,0.1);
+            padding: 1rem 2rem;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .current-player-name {
+            font-weight: 700;
+            font-size: 1.2rem;
+        }
+
+        .game-board {
+            display: grid;
+            grid-template-columns: repeat(3, 120px);
+            grid-template-rows: repeat(3, 120px);
+            gap: 15px;
+            margin: 0 auto 2rem;
+            padding: 30px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 20px;
+            backdrop-filter: blur(15px);
+            border: 2px solid rgba(255,255,255,0.2);
+            transform-style: preserve-3d;
+            animation: boardFloat 6s ease-in-out infinite;
+        }
+
+        @keyframes boardFloat {
+            0%, 100% { transform: rotateX(10deg) rotateY(5deg) translateY(0px); }
+            50% { transform: rotateX(10deg) rotateY(5deg) translateY(-10px); }
+        }
+
+        .cell {
+            background: linear-gradient(135deg, rgba(255,255,255,0.2), rgba(255,255,255,0.05));
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 3rem;
+            font-weight: bold;
+            color: white;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255,255,255,0.1);
+            transform-style: preserve-3d;
+        }
+
+        .cell:before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.5s;
+        }
+
+        .cell:hover:before {
+            left: 100%;
+        }
+
+        .cell:hover {
+            transform: translateZ(20px) scale(1.05);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            border-color: rgba(255,255,255,0.4);
+        }
+
+        .cell:active {
+            transform: translateZ(5px) scale(0.95);
+        }
+
+        .cell.x {
+            color: #ff6b6b;
+            text-shadow: 0 0 20px rgba(255, 107, 107, 0.8);
+            animation: popIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+
+        .cell.o {
+            color: #4ecdc4;
+            text-shadow: 0 0 20px rgba(78, 205, 196, 0.8);
+            animation: popIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+
+        @keyframes popIn {
+            0% {
+                transform: translateZ(0) scale(0) rotateY(180deg);
+                opacity: 0;
+            }
+            50% {
+                transform: translateZ(30px) scale(1.2) rotateY(90deg);
+            }
+            100% {
+                transform: translateZ(20px) scale(1) rotateY(0deg);
+                opacity: 1;
+            }
+        }
+
+        .winning-line {
+            background: linear-gradient(45deg, #ffd93d, #ff6b6b) !important;
+            animation: winPulse 1s ease-in-out infinite;
+        }
+
+        @keyframes winPulse {
+            0%, 100% { 
+                box-shadow: 0 0 30px rgba(255, 217, 61, 0.8);
+                transform: translateZ(30px) scale(1);
+            }
+            50% { 
+                box-shadow: 0 0 50px rgba(255, 107, 107, 1);
+                transform: translateZ(40px) scale(1.1);
+            }
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255,255,255,0.2);
+            font-family: 'Cairo', sans-serif;
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+
+        .btn:active {
+            transform: translateY(-1px);
+        }
+
+        .btn-new-game {
+            background: linear-gradient(135deg, #ff6b6b, #ffd93d);
+        }
+
+        .game-message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            background: linear-gradient(135deg, rgba(255,255,255,0.95), rgba(255,255,255,0.85));
+            color: #333;
+            padding: 3rem;
+            border-radius: 20px;
+            font-size: 1.5rem;
+            font-weight: 700;
+            text-align: center;
+            backdrop-filter: blur(20px);
+            border: 2px solid rgba(255,255,255,0.3);
+            z-index: 1000;
+            transition: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .game-message.show {
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        .particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: white;
+            border-radius: 50%;
+            animation: float 8s linear infinite;
+            opacity: 0.7;
+        }
+
+        @keyframes float {
+            0% {
+                transform: translateY(100vh) rotate(0deg);
+                opacity: 0;
+            }
+            10% {
+                opacity: 0.7;
+            }
+            90% {
+                opacity: 0.7;
+            }
+            100% {
+                transform: translateY(-10vh) rotate(360deg);
+                opacity: 0;
+            }
+        }
+
+        /* === RESPONSIVE DESIGN === */
+        @media (max-width: 768px) {
+            .setup-screen {
+                padding: 2rem 1.5rem;
+                margin: 1rem;
+            }
+
+            .setup-title {
+                font-size: 2rem;
+                margin-bottom: 0.5rem;
+            }
+
+            .title {
+                font-size: 2rem;
+                margin-bottom: 1rem;
+            }
+            
+            .game-board {
+                grid-template-columns: repeat(3, 90px);
+                grid-template-rows: repeat(3, 90px);
+                gap: 10px;
+                padding: 20px;
+            }
+            
+            .cell {
+                font-size: 2rem;
+            }
+            
+            .game-info {
+                flex-direction: column;
+                gap: 1rem;
+                padding: 0 1rem;
+            }
+            
+            .player-turn, .score {
+                padding: 0.5rem 1rem;
+                font-size: 1rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .setup-screen {
+                padding: 1.5rem 1rem;
+                border-radius: 20px;
+            }
+
+            .setup-title {
+                font-size: 1.8rem;
+            }
+
+            .player-input {
+                padding: 0.875rem 1rem;
+                font-size: 0.9rem;
+            }
+
+            .start-btn {
+                padding: 0.875rem 1.5rem;
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Background -->
+    <div class="background-container">
+        <div class="gradient-orb orb-1"></div>
+        <div class="gradient-orb orb-2"></div>
+        <div class="gradient-orb orb-3"></div>
+    </div>
+
+    <div class="particles"></div>
+    
+    <!-- Setup Screen -->
+    <div class="setup-screen" id="setupScreen">
+        <h1 class="setup-title">🎮 لعبة X O ثلاثية الأبعاد</h1>
+        <p class="setup-subtitle">أدخل أسماء اللاعبين لبدء اللعب</p>
+        
+        <div class="players-input">
+            <div class="player-group">
+                <label class="player-label player-x">
+                    <span>🔥 اللاعب الأول (X)</span>
+                </label>
+                <input 
+                    type="text" 
+                    class="player-input" 
+                    id="playerXName" 
+                    placeholder="أدخل اسم اللاعب الأول"
+                    maxlength="15"
+                >
+            </div>
+            
+            <div class="player-group">
+                <label class="player-label player-o">
+                    <span>💎 اللاعب الثاني (O)</span>
+                </label>
+                <input 
+                    type="text" 
+                    class="player-input" 
+                    id="playerOName" 
+                    placeholder="أدخل اسم اللاعب الثاني"
+                    maxlength="15"
+                >
+            </div>
+        </div>
+        
+        <button class="start-btn" id="startGameBtn">
+            🚀 ابدأ اللعب
+        </button>
+    </div>
+    
+    <!-- Game Screen -->
+    <div class="game-container" id="gameContainer">
+        <h1 class="title">لعبة X O ثلاثية الأبعاد</h1>
+        
+        <div class="game-info">
+            <div class="player-turn">
+                <span>دور: </span>
+                <span class="current-player-name" id="currentPlayerName"></span>
+                <span> (</span><span id="current-player">X</span><span>)</span>
+            </div>
+            <div class="score">
+                <span id="playerXScoreLabel">X</span>: <span id="score-x">0</span> | 
+                <span id="playerOScoreLabel">O</span>: <span id="score-o">0</span> | 
+                <span>التعادل: <span id="score-tie">0</span></span>
+            </div>
+        </div>
+        
+        <div class="game-board" id="board">
+            <button class="cell" data-index="0"></button>
+            <button class="cell" data-index="1"></button>
+            <button class="cell" data-index="2"></button>
+            <button class="cell" data-index="3"></button>
+            <button class="cell" data-index="4"></button>
+            <button class="cell" data-index="5"></button>
+            <button class="cell" data-index="6"></button>
+            <button class="cell" data-index="7"></button>
+            <button class="cell" data-index="8"></button>
+        </div>
+        
+        <div class="controls">
+            <button class="btn" id="resetGameBtn">جولة جديدة</button>
+            <button class="btn" id="resetScoreBtn">إعادة تعيين النتائج</button>
+            <button class="btn btn-new-game" id="newGameBtn">لعبة جديدة</button>
+        </div>
+    </div>
+    
+    <div class="game-message" id="message"></div>
+
+    <script>
+        // متغيرات اللعبة العامة
+        let gameData = {
+            board: ['', '', '', '', '', '', '', '', ''],
+            currentPlayer: 'X',
+            gameActive: true,
+            scores: { X: 0, O: 0, tie: 0 },
+            players: { X: '', O: '' },
+            winningConditions: [
+                [0, 1, 2], [3, 4, 5], [6, 7, 8], // صفوف
+                [0, 3, 6], [1, 4, 7], [2, 5, 8], // أعمدة
+                [0, 4, 8], [2, 4, 6] // أقطار
+            ]
+        };
+
+        // دالة بدء اللعبة
+        function startGame() {
+            const playerXName = document.getElementById('playerXName').value.trim();
+            const playerOName = document.getElementById('playerOName').value.trim();
+            
+            if (playerXName.length === 0 || playerOName.length === 0) {
+                alert('يرجى إدخال أسماء اللاعبين');
+                return;
+            }
+            
+            if (playerXName === playerOName) {
+                alert('يجب أن يكون اسم كل لاعب مختلف');
+                return;
+            }
+            
+            // تعيين أسماء اللاعبين
+            gameData.players.X = playerXName;
+            gameData.players.O = playerOName;
+            
+            // إخفاء شاشة الإعداد وإظهار اللعبة
+            document.getElementById('setupScreen').classList.add('hidden');
+            document.getElementById('gameContainer').classList.add('active');
+            
+            // تهيئة اللعبة
+            initializeGame();
+        }
+
+        // تهيئة اللعبة
+        function initializeGame() {
+            const cells = document.querySelectorAll('.cell');
+            cells.forEach((cell, index) => {
+                cell.addEventListener('click', () => handleCellClick(index));
+            });
+            
+            updateDisplay();
+            updateScoreLabels();
+        }
+
+        // التعامل مع النقر على الخلية
+        function handleCellClick(index) {
+            if (gameData.board[index] !== '' || !gameData.gameActive) {
+                return;
+            }
+
+            gameData.board[index] = gameData.currentPlayer;
+            updateCell(index);
+            
+            setTimeout(() => {
+                checkResult();
+            }, 500);
+        }
+
+        // تحديث الخلية
+        function updateCell(index) {
+            const cell = document.querySelector(`[data-index="${index}"]`);
+            cell.textContent = gameData.currentPlayer;
+            cell.classList.add(gameData.currentPlayer.toLowerCase());
+            cell.disabled = true;
+        }
+
+        // فحص النتيجة
+        function checkResult() {
+            let roundWon = false;
+            let winningIndices = [];
+
+            for (let i = 0; i < gameData.winningConditions.length; i++) {
+                const [a, b, c] = gameData.winningConditions[i];
+                if (gameData.board[a] && gameData.board[a] === gameData.board[b] && gameData.board[a] === gameData.board[c]) {
+                    roundWon = true;
+                    winningIndices = [a, b, c];
+                    break;
+                }
+            }
+
+            if (roundWon) {
+                handleWin(winningIndices);
+                return;
+            }
+
+            if (!gameData.board.includes('')) {
+                handleTie();
+                return;
+            }
+
+            gameData.currentPlayer = gameData.currentPlayer === 'X' ? 'O' : 'X';
+            updateDisplay();
+        }
+
+        // التعامل مع الفوز
+        function handleWin(winningIndices) {
+            gameData.gameActive = false;
+            gameData.scores[gameData.currentPlayer]++;
+            
+            // تأثير الفوز
+            winningIndices.forEach(index => {
+                const cell = document.querySelector(`[data-index="${index}"]`);
+                cell.classList.add('winning-line');
+            });
+
+            const winnerName = gameData.players[gameData.currentPlayer];
+            showMessage(`🎉 ${winnerName} فاز! 🎉`);
+            updateScoreDisplay();
+        }
+
+        // التعامل مع التعادل
+        function handleTie() {
+            gameData.gameActive = false;
+            gameData.scores.tie++;
+            showMessage('🤝 تعادل! 🤝');
+            updateScoreDisplay();
+        }
+
+        // عرض الرسالة
+        function showMessage(text) {
+            const messageEl = document.getElementById('message');
+            messageEl.textContent = text;
+            messageEl.classList.add('show');
+            
+            setTimeout(() => {
+                messageEl.classList.remove('show');
+            }, 3000);
+        }
+
+        // تحديث العرض
+        function updateDisplay() {
+            const currentPlayerName = gameData.players[gameData.currentPlayer];
+            document.getElementById('currentPlayerName').textContent = currentPlayerName;
+            document.getElementById('current-player').textContent = gameData.currentPlayer;
+            
+            // تغيير لون اسم اللاعب الحالي
+            const playerNameEl = document.getElementById('currentPlayerName');
+            playerNameEl.style.color = gameData.currentPlayer === 'X' ? '#ff6b6b' : '#4ecdc4';
+            playerNameEl.style.textShadow = gameData.currentPlayer === 'X' 
+                ? '0 0 10px rgba(255, 107, 107, 0.8)' 
+                : '0 0 10px rgba(78, 205, 196, 0.8)';
+        }
+
+        // تحديث تسميات النتائج
+        function updateScoreLabels() {
+            document.getElementById('playerXScoreLabel').textContent = gameData.players.X;
+            document.getElementById('playerOScoreLabel').textContent = gameData.players.O;
+        }
+
+        // تحديث عرض النتائج
+        function updateScoreDisplay() {
+            document.getElementById('score-x').textContent = gameData.scores.X;
+            document.getElementById('score-o').textContent = gameData.scores.O;
+            document.getElementById('score-tie').textContent = gameData.scores.tie;
+        }
+
+        // إعادة تعيين اللعبة
+        function resetGame() {
+            gameData.board = ['', '', '', '', '', '', '', '', ''];
+            gameData.currentPlayer = 'X';
+            gameData.gameActive = true;
+            
+            const cells = document.querySelectorAll('.cell');
+            cells.forEach(cell => {
+                cell.textContent = '';
+                cell.className = 'cell';
+                cell.disabled = false;
+            });
+            
+            updateDisplay();
+        }
+
+        // إعادة تعيين النتائج
+        function resetScore() {
+            gameData.scores = { X: 0, O: 0, tie: 0 };
+            updateScoreDisplay();
+            resetGame();
+        }
+
+        // لعبة جديدة
+        function newGame() {
+            document.getElementById('setupScreen').classList.remove('hidden');
+            document.getElementById('gameContainer').classList.remove('active');
+            
+            // إعادة تعيين النموذج
+            document.getElementById('playerXName').value = '';
+            document.getElementById('playerOName').value = '';
+            updateStartButton();
+            
+            // إعادة تعيين اللعبة
+            resetScore();
+        }
+
+        // تحديث حالة زر البدء
+        function updateStartButton() {
+            const playerXInput = document.getElementById('playerXName');
+            const playerOInput = document.getElementById('playerOName');
+            const startBtn = document.getElementById('startGameBtn');
+            
+            const canStart = playerXInput.value.trim().length > 0 && playerOInput.value.trim().length > 0;
+            startBtn.disabled = !canStart;
+        }
+
+        // إنشاء الجسيمات
+        function createParticles() {
+            const particlesContainer = document.querySelector('.particles');
+            
+            for (let i = 0; i < 50; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.animationDelay = Math.random() * 8 + 's';
+                particle.style.animationDuration = (Math.random() * 4 + 4) + 's';
+                
+                // ألوان مختلفة للجسيمات
+                const colors = ['#ff6b6b', '#4ecdc4', '#ffd93d', '#ffffff'];
+                particle.style.background = colors[Math.floor(Math.random() * colors.length)];
+                
+                particlesContainer.appendChild(particle);
+            }
+        }
+
+        // تأثيرات الماوس للوحة اللعب
+        function setupMouseEffects() {
+            document.addEventListener('mousemove', (e) => {
+                const board = document.querySelector('.game-board');
+                if (board && document.getElementById('gameContainer').classList.contains('active')) {
+                    const rect = board.getBoundingClientRect();
+                    const x = e.clientX - rect.left - rect.width / 2;
+                    const y = e.clientY - rect.top - rect.height / 2;
+                    
+                    const rotateX = (y / rect.height) * -10;
+                    const rotateY = (x / rect.width) * 10;
+                    
+                    board.style.transform = `rotateX(${10 + rotateX}deg) rotateY(${5 + rotateY}deg)`;
+                }
+            });
+
+            // إعادة تعيين الدوران عند مغادرة المؤشر
+            document.addEventListener('mouseleave', () => {
+                const board = document.querySelector('.game-board');
+                if (board) {
+                    board.style.transform = 'rotateX(10deg) rotateY(5deg)';
+                }
+            });
+        }
+
+        // تهيئة التطبيق عند تحميل الصفحة
+        document.addEventListener('DOMContentLoaded', function() {
+            // إنشاء الجسيمات
+            createParticles();
+            
+            // إعداد تأثيرات الماوس
+            setupMouseEffects();
+            
+            // إعداد أحداث النموذج
+            const playerXInput = document.getElementById('playerXName');
+            const playerOInput = document.getElementById('playerOName');
+            const startBtn = document.getElementById('startGameBtn');
+            
+            // تحديث زر البدء عند الكتابة
+            playerXInput.addEventListener('input', updateStartButton);
+            playerOInput.addEventListener('input', updateStartButton);
+            
+            // بدء اللعبة عند الضغط على Enter
+            playerXInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter' && !startBtn.disabled) {
+                    startGame();
+                }
+            });
+            
+            playerOInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter' && !startBtn.disabled) {
+                    startGame();
+                }
+            });
+            
+            // ربط الأحداث بالأزرار
+            startBtn.addEventListener('click', startGame);
+            document.getElementById('resetGameBtn').addEventListener('click', resetGame);
+            document.getElementById('resetScoreBtn').addEventListener('click', resetScore);
+            document.getElementById('newGameBtn').addEventListener('click', newGame);
+            
+            // تحديث الحالة الأولية
+            updateStartButton();
+        });
+    </script>
+</body>
+</html>
